@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Writer Pad - Creative Text Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Add Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f1f3f5;
+            --text-color: #333333;
+            --toolbar-bg: #ffffff;
+            --primary-color: #4caf50;
+            --secondary-color: #2196F3;
+            --hover-color: #45a049;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --toolbar-bg: #1f1f1f;
+            --primary-color: #2e7d32;
+            --hover-color: #1b5e20;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: 0.3s all;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--toolbar-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .site-name {
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 10px 16px;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            transform: translateY(-2px);
+        }
+
+        .editor-container {
+            display: flex;
+            width: 100%;
+        }
+
+        #editor {
+            width: 100%;
+            height: 50vh;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            resize: vertical;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 16px;
+            line-height: 1.7;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        #editor:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        #line-numbers {
+            width: 40px;
+            padding: 20px 10px 20px 0;
+            text-align: right;
+            border-right: 1px solid #ddd;
+            font-family: monospace;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #888;
+            background-color: var(--bg-color);
+            user-select: none;
+        }
+
+        .stats {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .filename-input {
+            margin-bottom: 20px;
+        }
+
+        .filename-input input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            margin-top: 5px;
+            font-size: 15px;
+        }
+
+        .filename-input input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .warning {
+            color: #ff4444;
+            font-weight: bold;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .privacy-link {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .privacy-link a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+
+        .privacy-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Site Name -->
+        <h1 class="site-name">Noteit</h1>
+
+        <!-- File Name Input -->
+        <div class="filename-input">
+            <label for="filename">File Name:</label>
+            <input type="text" id="filename" placeholder="Enter file name (e.g., MyDocument)">
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button onclick="toggleMode()">🌓 Toggle Mode</button>
+            <button onclick="formatText('bold')"><b>B</b></button>
+            <button onclick="formatText('italic')"><i>I</i></button>
+            <button onclick="formatText('underline')"><u>U</u></button>
+            <button onclick="formatText('insertUnorderedList')">• List</button>
+            <button onclick="formatText('insertOrderedList')">1. List</button>
+            <button onclick="exportTXT()">📥.txt</button>
+            <button onclick="exportPDF()">📥.PDF</button>
+        </div>
+
+        <!-- Editor with Line Numbers -->
+        <div class="editor-container">
+            <div id="line-numbers"></div>
+            <div id="editor" contenteditable="true" spellcheck="true"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div>📝 Words: <span id="wordCount">0</span></div>
+            <div>🔤 Characters: <span id="charCount">0</span></div>
+        </div>
+
+        <!-- Warning -->
+        <div class="warning" id="sizeWarning">
+            ⚠️ Warning: Document approaching storage limit! Export your work.
+        </div>
+
+        <!-- Privacy Link -->
+        <div class="privacy-link">
+            <a href="#" onclick="showPrivacy()">Privacy Policy</a>
+        </div>
+    </div>
+
+    <script>
+        // Local Storage for auto-save
+        const editor = document.getElementById('editor');
+        const filenameInput = document.getElementById('filename');
+        const lineNumbers = document.getElementById('line-numbers');
+        
+        // Load saved content
+        editor.innerHTML = localStorage.getItem('writerpad-content') || '';
+        filenameInput.value = localStorage.getItem('writerpad-filename') || '';
+        updateCount();
+        updateLineNumbers();
+
+        // Auto-save every 2 seconds
+        setInterval(() => {
+            localStorage.setItem('writerpad-content', editor.innerHTML);
+            localStorage.setItem('writerpad-filename', filenameInput.value);
+        }, 2000);
+
+        // Formatting functions
+        function formatText(command) {
+            document.execCommand(command, false, null);
+            editor.focus();
+        }
+
+        // Dark/Light mode
+        function toggleMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        // Export functions
+        function exportTXT() {
+            const text = editor.innerText;
+            const filename = filenameInput.value || `writerpad-${new Date().toISOString().slice(0,10)}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.txt`;
+            a.click();
+        }
+
+        function exportPDF() {
+            const doc = new jspdf.jsPDF();
+            const text = editor.innerText;
+            const filename = filenameInput.value || `writerpad-${new Date().toISOString().slice(0,10)}`;
+            doc.text(text, 10, 10);
+            doc.save(`${filename}.pdf`);
+        }
+
+        // Word/Character count
+        function updateCount() {
+            const text = editor.innerText.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            document.getElementById('wordCount').textContent = words;
+            document.getElementById('charCount').textContent = text.length;
+
+            // Storage size check
+            const htmlContent = editor.innerHTML;
+            const currentSize = new Blob([htmlContent]).size;
+            const sizeWarning = document.getElementById('sizeWarning');
+
+            if (currentSize > 4_500_000) { // 4.5MB
+                sizeWarning.style.display = 'block';
+            } else {
+                sizeWarning.style.display = 'none';
+            }
+        }
+
+        // Line numbers
+        function updateLineNumbers() {
+            const lines = editor.innerText.split('\n');
+            lineNumbers.innerHTML = lines.map((_, i) => `<div>${i + 1}</div>`).join('');
+        }
+
+        editor.addEventListener('input', () => {
+            updateCount();
+            updateLineNumbers();
+        });
+
+        // Privacy Policy
+        function showPrivacy() {
+            alert(`Privacy Policy:\n
+1. All content remains in your browser's local storage
+2. No data is collected or stored on any servers
+3. No tracking cookies or analytics are used
+4. Your documents never leave your device
+5. You retain full ownership of all content
+6. No third-party sharing of any kind`);
+        }
+    </script>
+</body>
+</html>
